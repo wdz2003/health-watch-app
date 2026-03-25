@@ -36,6 +36,30 @@ jobs:
         pip install --upgrade pip
         pip install buildozer cython==0.29.33
     
+    - name: Install Android SDK and accept licenses
+      run: |
+        # Create Android SDK directory
+        mkdir -p ~/Android/Sdk/cmdline-tools
+        
+        # Download command-line tools
+        cd /tmp
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+        unzip -q cmdline-tools.zip
+        mkdir -p ~/Android/Sdk/cmdline-tools/latest
+        mv cmdline-tools/* ~/Android/Sdk/cmdline-tools/latest/ 2>/dev/null || true
+        
+        # Set environment variables
+        echo "ANDROID_HOME=~/Android/Sdk" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=~/Android/Sdk" >> $GITHUB_ENV
+        echo "$HOME/Android/Sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$HOME/Android/Sdk/platform-tools" >> $GITHUB_PATH
+        
+        # Accept all licenses
+        yes | ~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        
+        # Install required SDK components
+        ~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+    
     - name: Debug - List files
       run: |
         echo "=== Current directory files ==="
