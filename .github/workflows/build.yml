@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -19,43 +19,42 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.10'
     
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev automake libtool-bin python3-dev
+        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev automake libtool-bin python3-dev
     
     - name: Set JAVA_HOME
       run: |
         echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
         echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> $GITHUB_PATH
     
-    - name: Install Buildozer and dependencies
+    - name: Install Buildozer
       run: |
         pip install --upgrade pip
         pip install buildozer cython==0.29.33
-        buildozer version
     
-    - name: Accept Android SDK licenses
+    - name: Debug - List files
       run: |
-        yes | sdkmanager --licenses || true
-    
-    - name: Initialize buildozer (first time)
-      run: |
-        buildozer init
-      continue-on-error: true
+        echo "=== Current directory files ==="
+        ls -la
+        echo "=== buildozer.spec content ==="
+        cat buildozer.spec
     
     - name: Build APK
       run: |
         buildozer android debug
-      continue-on-error: true
+      env:
+        BUILDOZER_WARN_ON_ROOT: 1
     
-    - name: Check if APK was created
+    - name: List build artifacts
+      if: always()
       run: |
-        ls -la bin/
-        find . -name "*.apk" -type f
-      continue-on-error: true
+        echo "=== Checking for APK files ==="
+        ls -la bin/ 2>/dev/null || echo "bin/ directory not found"
+        find . -name "*.apk" -type f 2>/dev/null
     
     - name: Upload APK artifacts
       uses: actions/upload-artifact@v4
@@ -64,15 +63,3 @@ jobs:
         name: health-monitor-apk
         path: bin/*.apk
         retention-days: 90
-      continue-on-error: true
-    
-    - name: Build summary
-      if: always()
-      run: |
-        echo "## 构建完成" >> $GITHUB_STEP_SUMMARY
-        echo "- 构建时间: $(date)" >> $GITHUB_STEP_SUMMARY
-        if [ -f bin/*.apk ]; then
-          echo "- APK 文件: $(ls -lh bin/*.apk)" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "- APK 文件: 未找到" >> $GITHUB_STEP_SUMMARY
-        fi
